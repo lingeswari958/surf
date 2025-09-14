@@ -1,0 +1,132 @@
+surf.java (servlet)
+
+package tech;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+/**
+ * Servlet implementation class tech
+ */
+@WebServlet("/tech")
+public class tech extends HttpServlet {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String text = request.getParameter("text");
+        String findWord = request.getParameter("findWord");
+        String replaceWord = request.getParameter("replaceWord");
+
+        if (text == null || findWord == null || replaceWord == null) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Missing parameters");
+            return;
+        }
+
+        // Simple replacement (case-insensitive)
+        String updated = text.replaceAll("(?i)" + findWord, replaceWord);
+
+        // Send JSON response
+        response.setContentType("application/json");
+        response.getWriter().write("{\"result\":\"" + updated.replace("\"","\\\"") + "\"}");
+    }
+}
+
+
+
+techsurf.html
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Find & Replace</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f9; }
+    h1 { color: #333; }
+    textarea, input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; }
+    button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    .result { background: #fff; border: 1px solid #ccc; padding: 15px; border-radius: 6px; margin-top: 15px; white-space: pre-wrap; }
+    .highlight { background: yellow; }
+  </style>
+</head>
+<body>
+  <h1>?? Smart Find & Replace</h1>
+
+  <textarea id="textInput" rows="6">Google is the best search engine. Visit https://google.com for more info.</textarea>
+
+  <input type="text" id="findWord" placeholder="Word to Find (e.g., Google)">
+  <input type="text" id="replaceWord" placeholder="Word to Replace With (e.g., Bing)">
+  
+  <button onclick="doReplace()">Replace</button>
+  <button onclick="undoReplace()">Undo</button>
+
+  <h2>Result:</h2>
+  <div id="result" class="result"></div>
+
+  <script>
+    let originalText = document.getElementById("textInput").value;
+    let lastResult = "";
+
+    function doReplace() {
+      const text = document.getElementById("textInput").value;
+      const findWord = document.getElementById("findWord").value;
+      const replaceWord = document.getElementById("replaceWord").value;
+
+      if (!findWord) {
+        alert("Please enter a word to find!");
+        return;
+      }
+
+      // Replace all instances
+      const regex = new RegExp(findWord, "gi");
+      const updated = text.replace(regex, match => {
+        // If it's a link, replace domain too
+        if (match.toLowerCase().includes("http")) {
+          return replaceWord.toLowerCase();
+        }
+        return replaceWord;
+      });
+
+      lastResult = document.getElementById("result").innerHTML;
+      document.getElementById("result").innerHTML = updated.replace(regex, `<span class="highlight">${replaceWord}</span>`);
+    }
+
+    function undoReplace() {
+      if (lastResult) {
+        document.getElementById("result").innerHTML = lastResult;
+      } else {
+        document.getElementById("result").innerHTML = originalText;
+      }
+    }
+
+    // Show initial text
+    document.getElementById("result").textContent = originalText;
+  </script>
+</body>
+</html>
+
+
+
+surf1.js
+
+
+function doReplace() {
+  const text = document.getElementById("textInput").value;
+  const findWord = document.getElementById("findWord").value;
+  const replaceWord = document.getElementById("replaceWord").value;
+
+  fetch("http://localhost:8080/SmartReplace/replace", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `text=${encodeURIComponent(text)}&findWord=${findWord}&replaceWord=${replaceWord}`
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("result").innerText = data.result;
+  })
+  .catch(err => console.error(err));
+}
